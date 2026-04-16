@@ -1,0 +1,39 @@
+{
+    "rows": [
+        {
+            "uuid": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+            "enabled": "1",
+            "sequence": "1",
+            "action": "pass",
+            "quick": "1",
+            "interface": "lan",
+            "direction": "in",
+            "ipprotocol": "inet",
+            "protocol": "any",
+            "source_net": "lan",
+            "source_not": "0",
+            "destination_net": "any",
+            "destination_not": "0",
+            "description": "Default allow LAN to any rule"
+        },
+        {
+            "uuid": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+            "enabled": "1",
+            "sequence": "2",
+            "action": "block",
+            "quick": "1",
+            "interface": "wan",
+            "direction": "in",
+            "ipprotocol": "inet",
+            "protocol": "any",
+            "source_net": "any",
+            "source_not": "0",
+            "destination_net": "any",
+            "destination_not": "0",
+            "description": "Default deny WAN"
+        }
+    ],
+    "rowCount": 2,
+    "total": 2,
+    "current": 1
+}

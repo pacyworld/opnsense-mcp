@@ -1,0 +1,18 @@
+[
+    {
+        "mac": "00:50:56:c0:00:08",
+        "ip": "192.168.1.1",
+        "intf": "em0",
+        "expired": false,
+        "permanent": false,
+        "hostname": "gateway"
+    },
+    {
+        "mac": "aa:bb:cc:dd:ee:ff",
+        "ip": "192.168.1.100",
+        "intf": "em0",
+        "expired": false,
+        "permanent": false,
+        "hostname": "workstation"
+    }
+]

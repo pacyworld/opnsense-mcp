@@ -1,0 +1,19 @@
+{
+    "default": "firewall1",
+    "instances": {
+        "firewall1": {
+            "url": "https://192.168.1.1",
+            "api_key": "your_api_key_here",
+            "api_secret": "your_api_secret_here",
+            "verify_ssl": false,
+            "description": "Primary firewall"
+        },
+        "firewall2": {
+            "url": "https://10.0.0.1",
+            "api_key": "your_api_key_here",
+            "api_secret": "your_api_secret_here",
+            "verify_ssl": false,
+            "description": "Secondary firewall"
+        }
+    }
+}

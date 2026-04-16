@@ -1,0 +1,19 @@
+{
+    "default": "primary",
+    "instances": {
+        "primary": {
+            "url": "https://10.0.0.1",
+            "api_key": "test_key_primary",
+            "api_secret": "test_secret_primary",
+            "verify_ssl": false,
+            "description": "Primary test firewall"
+        },
+        "secondary": {
+            "url": "https://10.0.0.2",
+            "api_key": "test_key_secondary",
+            "api_secret": "test_secret_secondary",
+            "verify_ssl": false,
+            "description": "Secondary test firewall"
+        }
+    }
+}

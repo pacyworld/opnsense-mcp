@@ -1,0 +1,144 @@
+#!/usr/bin/env php
+<?php
+/**
+ * OPNsense MCP Server - stdio Entry Point
+ *
+ * Multi-instance OPNsense firewall management via the Model Context Protocol.
+ * Communicates over stdin/stdout using JSON-RPC 2.0.
+ *
+ * Usage:
+ *   php bin/opnsense-mcp
+ *
+ * Environment:
+ *   OPNSENSE_CONFIG  Path to instances.json configuration file
+ *
+ * @package    OPNsenseMCP
+ * @author     Daniel Morante
+ * @copyright  2026 The Daniel Morante Company, Inc.
+ * @license    BSD-2-Clause
+ */
+
+// Use Composer autoload if available, otherwise standalone
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require __DIR__ . '/../vendor/autoload.php';
+} else {
+    spl_autoload_register(function ($class) {
+        $prefixes = [
+            'Mcp\\' => __DIR__ . '/../classes/Mcp/',
+            'OPNsense\\' => __DIR__ . '/../classes/OPNsense/',
+        ];
+        foreach ($prefixes as $prefix => $baseDir) {
+            if (strncmp($prefix, $class, strlen($prefix)) === 0) {
+                $relativeClass = substr($class, strlen($prefix));
+                $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+                if (file_exists($file)) {
+                    require $file;
+                    return;
+                }
+            }
+        }
+        // Tool classes (no namespace, in tools/ directory)
+        $toolFile = __DIR__ . '/../tools/' . $class . '.php';
+        if (file_exists($toolFile)) {
+            require $toolFile;
+        }
+    });
+}
+
+use Mcp\McpServer;
+use OPNsense\InstanceManager;
+
+// --- Configuration ---
+
+$configPath = getenv('OPNSENSE_CONFIG') ?: null;
+
+// Check CLI argument: --config=/path/to/instances.json
+foreach ($argv ?? [] as $arg) {
+    if (str_starts_with($arg, '--config=')) {
+        $configPath = substr($arg, 9);
+    }
+}
+
+// Default config location
+if ($configPath === null) {
+    $candidates = [
+        __DIR__ . '/../config/instances.json',
+        getenv('HOME') . '/.config/opnsense-mcp/instances.json',
+        '/usr/local/etc/opnsense-mcp/instances.json',
+    ];
+    foreach ($candidates as $candidate) {
+        if (file_exists($candidate)) {
+            $configPath = $candidate;
+            break;
+        }
+    }
+}
+
+if ($configPath === null || !file_exists($configPath)) {
+    fwrite(STDERR, "[opnsense-mcp] ERROR: No configuration file found.\n");
+    fwrite(STDERR, "  Set OPNSENSE_CONFIG environment variable or use --config=/path/to/instances.json\n");
+    fwrite(STDERR, "  Or place instances.json in config/ directory.\n");
+    exit(1);
+}
+
+// --- Bootstrap ---
+
+function debug(string $message): void
+{
+    fwrite(STDERR, "[opnsense-mcp] " . $message . "\n");
+}
+
+try {
+    $manager = InstanceManager::fromFile($configPath);
+} catch (\Exception $e) {
+    fwrite(STDERR, "[opnsense-mcp] ERROR: " . $e->getMessage() . "\n");
+    exit(1);
+}
+
+$instanceCount = $manager->count();
+debug("Loaded {$instanceCount} instance(s) from {$configPath} (default: {$manager->getDefault()})");
+
+// --- Create MCP Server ---
+
+$server = new McpServer('opnsense-mcp', '0.1.0');
+
+// Register tool classes (they will be added in Phase 2+)
+$toolFiles = glob(__DIR__ . '/../tools/*.php');
+foreach ($toolFiles as $toolFile) {
+    $className = basename($toolFile, '.php');
+    if (class_exists($className)) {
+        $server->register(new $className($manager));
+        debug("Registered tools: {$className}");
+    }
+}
+
+debug("MCP server started (stdio transport)");
+
+// --- Main Loop ---
+
+while (($line = fgets(STDIN)) !== false) {
+    $line = trim($line);
+    if (empty($line)) {
+        continue;
+    }
+
+    debug("Received: " . substr($line, 0, 200) . (strlen($line) > 200 ? '...' : ''));
+
+    $request = json_decode($line, true);
+    if ($request === null) {
+        debug("Invalid JSON received");
+        continue;
+    }
+
+    // Handle the request
+    $response = $server->handleRequest($request);
+
+    if (!empty($response)) {
+        $output = json_encode($response, JSON_UNESCAPED_SLASHES);
+        debug("Sending: " . substr($output, 0, 200) . (strlen($output) > 200 ? '...' : ''));
+        fwrite(STDOUT, $output . "\n");
+        fflush(STDOUT);
+    }
+}
+
+debug("MCP server stopped");

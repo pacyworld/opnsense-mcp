@@ -1,0 +1,21 @@
+{
+    "product": {
+        "CORE_PRODUCT": "OPNsense",
+        "CORE_VERSION": "26.1.2",
+        "CORE_SERIES": "26.1",
+        "CORE_NICKNAME": "Witty Woodpecker",
+        "CORE_ARCH": "amd64",
+        "CORE_ABI": "26.1",
+        "CORE_HASH": "685ed6be1",
+        "product_name": "OPNsense",
+        "product_version": "26.1.2_5",
+        "product_series": "26.1",
+        "product_arch": "amd64",
+        "product_nickname": "Witty Woodpecker",
+        "product_website": "https://opnsense.org/",
+        "product_latest": "26.1.2",
+        "product_mirror": "https://pkg.opnsense.org/FreeBSD:14:amd64/26.1"
+    },
+    "status_msg": "Firmware status check was successful.",
+    "status": "ok"
+}
