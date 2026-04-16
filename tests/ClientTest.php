@@ -166,8 +166,9 @@ class ClientTest extends TestCase
 
         $client->get('core/firmware/status');
 
-        $this->assertContains('Content-Type: application/json', $requests[0]['headers']);
         $this->assertContains('Accept: application/json', $requests[0]['headers']);
+        // GET requests should NOT include Content-Type (OPNsense rejects it)
+        $this->assertNotContains('Content-Type: application/json', $requests[0]['headers']);
     }
 
     public function testEmptyJsonResponseReturnsEmptyArray(): void

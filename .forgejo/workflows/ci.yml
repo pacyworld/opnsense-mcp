@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    name: 'PHP Tests (FreeBSD)'
+    runs-on: FreeBSD
+
+    steps:
+      - name: Checkout
+        run: |
+          rm -rf opnsense-mcp
+          git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git opnsense-mcp
+
+      - name: PHP syntax check
+        run: find opnsense-mcp/classes opnsense-mcp/tools opnsense-mcp/bin -name "*.php" | xargs -n1 php -l
+
+      - name: Install dev dependencies
+        run: cd opnsense-mcp && composer install --no-interaction --prefer-dist
+
+      - name: Run tests
+        run: cd opnsense-mcp && vendor/bin/phpunit --colors=always

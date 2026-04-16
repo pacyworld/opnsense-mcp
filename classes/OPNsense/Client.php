@@ -144,10 +144,10 @@ class Client
     private function request(string $method, string $endpoint, ?array $data = null): array
     {
         $url = $this->baseUrl . '/api/' . ltrim($endpoint, '/');
-        $headers = [
-            'Content-Type: application/json',
-            'Accept: application/json',
-        ];
+        $headers = ['Accept: application/json'];
+        if ($method === 'POST') {
+            $headers[] = 'Content-Type: application/json';
+        }
         $body = ($data !== null) ? json_encode($data) : null;
 
         // Use injected HTTP client if available (for testing)
