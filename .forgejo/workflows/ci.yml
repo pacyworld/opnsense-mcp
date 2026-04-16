@@ -17,6 +17,15 @@ jobs:
           rm -rf opnsense-mcp
           git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git opnsense-mcp
 
+      - name: Environment
+        run: |
+          echo "=== PHP ==="
+          php -v
+          echo "=== Extensions ==="
+          php -m | grep -iE 'curl|json|dom|mbstring|phar|xml|tokenizer' || true
+          echo "=== Composer ==="
+          which composer && composer --version || echo "composer not found in PATH"
+
       - name: PHP syntax check
         run: find opnsense-mcp/classes opnsense-mcp/tools opnsense-mcp/bin -name "*.php" | xargs -n1 php -l
 
