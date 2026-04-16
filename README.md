@@ -16,7 +16,7 @@ Existing OPNsense MCP servers only support a single firewall per server instance
 
 - **Multi-instance** — manage N firewalls from a single MCP server
 - **30 tools** — firewall, NAT, DHCP, DNS, VPN, interfaces, services, logs, backups
-- **PHP 8.1+** — zero runtime dependencies beyond `ext-curl` and `ext-json`
+- **PHP 8.2+** — zero runtime dependencies beyond `ext-curl` and `ext-json`
 - **MCP 2025-03-26** — latest Model Context Protocol specification
 - **Testable** — dependency injection for HTTP client, 112 unit tests
 - **Modular tools** — organized by domain across 13 tool classes
@@ -122,31 +122,53 @@ The config file path is resolved in order:
 
 ### Requirements
 
-- PHP 8.1 or later
+- PHP 8.2 or later (PHPUnit 11 requires 8.2+)
 - ext-curl
 - ext-json
-- Composer (for dev dependencies only)
+- PHPUnit 11 (system package or via `shivammathur/setup-php`)
+
+No Composer required — the project uses the Enchilada Framework autoloader with vendored libraries.
 
 ### Setup
 
 ```bash
-git clone https://github.com/pacyworld/opnsense-mcp.git
+git clone https://pacyworld.dev/pacyworld/opnsense-mcp.git
 cd opnsense-mcp
-composer install
+
+# Copy config and add your OPNsense API credentials
+cp config/instances.json.sample config/instances.json
+# Edit config/instances.json with your firewall URL, API key, and secret
 ```
 
 ### Testing
 
 ```bash
-# Run all tests
-vendor/bin/phpunit
-
-# With colors
-vendor/bin/phpunit --colors=always
+# Run all unit tests (113 tests, no network required)
+phpunit --colors=always
 
 # Syntax check
-find classes tools bin -name "*.php" | xargs -n1 php -l
+find classes tools bin system libraries -name "*.php" | xargs -n1 php -l
 ```
+
+### Testing Against a Real OPNsense Instance
+
+To test the MCP server against a real OPNsense firewall:
+
+1. Create `config/instances.json` with your firewall credentials (see [Configuration](#configuration))
+2. Run the server interactively via stdin:
+
+```bash
+# Start the server
+OPNSENSE_CONFIG=config/instances.json php bin/opnsense-mcp
+
+# Then paste JSON-RPC requests on stdin, for example:
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"test","version":"1.0"}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{}}
+{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"system_status","arguments":{}}}
+{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"arp_table","arguments":{}}}
+```
+
+> **Generating API keys:** In OPNsense, go to **System → Access → Users**, edit a user, scroll to **API keys**, and click **+** to generate a key/secret pair. The user needs appropriate permissions for the endpoints you want to access.
 
 ### Building the PHAR
 
@@ -163,10 +185,12 @@ opnsense-mcp/
 ├── classes/
 │   ├── Mcp/                  # MCP protocol layer (JSON-RPC, tool registry)
 │   └── OPNsense/             # API client and instance manager
-├── tools/                    # MCP tool implementations
-├── tests/                    # PHPUnit tests + fixtures
+├── libraries/
+│   └── EnchiladaHTTP/        # Vendored HTTP client
+├── system/                   # Enchilada Framework (autoloader, app config)
+├── tools/                    # MCP tool implementations (13 classes)
+├── tests/                    # PHPUnit tests + fixtures (113 tests)
 ├── config/                   # Configuration templates
-├── composer.json             # Dev dependencies (PHPUnit)
 └── phpunit.xml               # Test configuration
 ```
 

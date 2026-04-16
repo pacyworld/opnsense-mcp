@@ -83,6 +83,7 @@ class Client
         $this->http = new \EnchiladaHTTP($this->baseUrl);
         $this->http->setPlaintextAuth($apiKey, $apiSecret);
         $this->http->setTimeout($timeout);
+        $this->http->setVerifySsl($verifySsl);
     }
 
     /**

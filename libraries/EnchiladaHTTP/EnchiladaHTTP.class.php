@@ -60,6 +60,7 @@ class EnchiladaHTTP {
 	// Extra stuff to pass to CURL
 	protected $ca_cert;
 	protected $plaintext_auth;
+	protected $verify_ssl = true;
 
 	/**
 	 * Create a new instance
@@ -157,8 +158,8 @@ class EnchiladaHTTP {
 			CURLOPT_URL => $url,
 			CURLOPT_TIMEOUT => $effectiveTimeout,
 			CURLOPT_RETURNTRANSFER => true,
-			CURLOPT_SSL_VERIFYPEER => true,
-			CURLOPT_SSL_VERIFYHOST => 2,
+			CURLOPT_SSL_VERIFYPEER => $this->verify_ssl,
+			CURLOPT_SSL_VERIFYHOST => $this->verify_ssl ? 2 : 0,
 			CURLOPT_HTTPHEADER => $headers,
 			CURLOPT_FOLLOWLOCATION => true,
 			CURLOPT_CUSTOMREQUEST => $method,
@@ -257,6 +258,15 @@ class EnchiladaHTTP {
 	 */
 	public function setCaCert($path){
 		$this->ca_cert = $path;
+	}
+
+	/**
+	 * Enable or disable SSL certificate verification
+	 * 
+	 * @param bool $verify Whether to verify SSL certificates
+	 */
+	public function setVerifySsl(bool $verify){
+		$this->verify_ssl = $verify;
 	}
 
 	/**
