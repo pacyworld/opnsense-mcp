@@ -15,10 +15,11 @@ Existing OPNsense MCP servers only support a single firewall per server instance
 ## Features
 
 - **Multi-instance** — manage N firewalls from a single MCP server
+- **30 tools** — firewall, NAT, DHCP, DNS, VPN, interfaces, services, logs, backups
 - **PHP 8.1+** — zero runtime dependencies beyond `ext-curl` and `ext-json`
 - **MCP 2025-03-26** — latest Model Context Protocol specification
-- **Testable** — dependency injection for HTTP client, 47+ unit tests
-- **Modular tools** — organized by domain (firewall, diagnostics, DHCP, DNS, VPN, etc.)
+- **Testable** — dependency injection for HTTP client, 112 unit tests
+- **Modular tools** — organized by domain across 13 tool classes
 
 ## Quick Start
 
@@ -162,6 +163,43 @@ opnsense-mcp/
 ├── composer.json             # Dev dependencies (PHPUnit)
 └── phpunit.xml               # Test configuration
 ```
+
+## Tools
+
+| Category | Tool | Description |
+|----------|------|-------------|
+| **Instances** | `list_instances` | List all configured firewall instances |
+| | `instance_info` | Live system/firmware info for an instance |
+| **System** | `system_status` | Product version, architecture, update status |
+| | `firmware_status` | Detailed firmware and update information |
+| **Firewall** | `firewall_rules` | List/get/create/update/delete/toggle filter rules |
+| | `firewall_aliases` | List/get/create/update/delete aliases |
+| | `firewall_apply` | Apply pending firewall changes |
+| **Diagnostics** | `arp_table` | MAC-to-IP mappings |
+| | `ndp_table` | IPv6 neighbor discovery |
+| | `gateway_status` | Gateway online/offline, latency, packet loss |
+| | `routing_table` | Static routes |
+| **Interfaces** | `interfaces` | All interfaces with IPs, status, media |
+| | `vlans` | VLAN CRUD |
+| **DHCP** | `dhcp_leases` | Active DHCP leases (Kea + legacy) |
+| | `dhcp_reservations` | Static reservation CRUD |
+| **DNS** | `dns_host_overrides` | Unbound host override CRUD |
+| | `dns_domain_overrides` | Unbound domain override CRUD |
+| **NAT** | `nat_outbound` | Source NAT rule CRUD |
+| | `nat_port_forward` | Destination NAT rule CRUD |
+| **VPN** | `vpn_status` | WireGuard, OpenVPN, IPsec tunnel status |
+| | `openvpn_instances` | OpenVPN instance CRUD |
+| **Services** | `service_list` | All services with running status |
+| | `service_control` | Start/stop/restart a service |
+| **HAProxy** | `haproxy_servers` | Server CRUD (requires os-haproxy) |
+| | `haproxy_backends` | Backend CRUD (requires os-haproxy) |
+| **Backup** | `backup_list` | List config backups |
+| | `backup_create` | Create a new backup |
+| | `backup_delete` | Delete a backup |
+| **Logs** | `firewall_log` | Recent blocked/passed packets |
+| | `system_log` | Recent system log entries |
+
+Every tool accepts an optional `instance` parameter to target a specific firewall.
 
 ## Architecture
 
