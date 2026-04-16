@@ -178,7 +178,27 @@ class McpServerTest extends TestCase
 
         $this->assertEquals('2.0', $response['jsonrpc']);
         $this->assertEquals(7, $response['id']);
-        $this->assertEquals([], $response['result']);
+        $this->assertIsObject($response['result']);
+    }
+
+    public function testToolsCallExecutionErrorReturnsIsError(): void
+    {
+        // Call 'add' tool with wrong types — should return isError content, not JSON-RPC error
+        $response = $this->server->handleRequest([
+            'jsonrpc' => '2.0',
+            'id' => 9,
+            'method' => 'tools/call',
+            'params' => [
+                'name' => 'greet',
+                // Missing required 'name' argument
+                'arguments' => [],
+            ],
+        ]);
+
+        $this->assertEquals('2.0', $response['jsonrpc']);
+        $this->assertEquals(9, $response['id']);
+        $this->assertTrue($response['result']['isError']);
+        $this->assertEquals('text', $response['result']['content'][0]['type']);
     }
 
     public function testServerWithNoToolsReturnsEmptyList(): void

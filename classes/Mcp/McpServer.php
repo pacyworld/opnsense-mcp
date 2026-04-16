@@ -54,7 +54,7 @@ class McpServer
      * @param string $name    Server name for client identification
      * @param string $version Server version string
      */
-    public function __construct(string $name = 'opnsense-mcp', string $version = '0.1.0')
+    public function __construct(string $name = 'opnsense-mcp', string $version = '1.0.0')
     {
         $this->registry = new ToolRegistry();
         $this->serverInfo = [
@@ -96,7 +96,7 @@ class McpServer
                 'notifications/initialized' => null, // Notification, no response
                 'tools/list' => $this->handleToolsList($params),
                 'tools/call' => $this->handleToolsCall($params),
-                'ping' => [],
+                'ping' => new \stdClass(), // Empty object per MCP spec
                 default => throw new \Exception("Method not found: {$method}", -32601),
             };
 
@@ -107,8 +107,8 @@ class McpServer
 
             return $this->successResponse($id, $result);
 
-        } catch (\Exception $e) {
-            return $this->errorResponse($id, $e->getCode() ?: -32603, $e->getMessage());
+        } catch (\Throwable $e) {
+            return $this->errorResponse($id, (int)($e->getCode()) ?: -32603, $e->getMessage());
         }
     }
 
@@ -164,14 +164,27 @@ class McpServer
             throw new \Exception("Unknown tool: {$name}", -32602);
         }
 
-        $result = $this->registry->callTool($name, $arguments);
+        try {
+            $result = $this->registry->callTool($name, $arguments);
+        } catch (\Throwable $e) {
+            // Tool execution error — return as MCP error content, not JSON-RPC error
+            return [
+                'content' => [
+                    [
+                        'type' => 'text',
+                        'text' => json_encode(['error' => $e->getMessage()]),
+                    ],
+                ],
+                'isError' => true,
+            ];
+        }
 
         // Format result as MCP content
         return [
             'content' => [
                 [
                     'type' => 'text',
-                    'text' => is_string($result) ? $result : json_encode($result),
+                    'text' => is_string($result) ? $result : json_encode($result, JSON_UNESCAPED_SLASHES),
                 ],
             ],
         ];
@@ -180,11 +193,11 @@ class McpServer
     /**
      * Build a JSON-RPC success response.
      *
-     * @param  mixed               $id     Request ID
-     * @param  array<string,mixed> $result Result data
-     * @return array<string,mixed>         JSON-RPC response
+     * @param  mixed                       $id     Request ID
+     * @param  array<string,mixed>|object  $result Result data
+     * @return array<string,mixed>                 JSON-RPC response
      */
-    private function successResponse($id, array $result): array
+    private function successResponse($id, array|object $result): array
     {
         return [
             'jsonrpc' => '2.0',

@@ -100,7 +100,7 @@ debug("Loaded {$instanceCount} instance(s) from {$configPath} (default: {$manage
 
 // --- Create MCP Server ---
 
-$server = new McpServer('opnsense-mcp', '0.1.0');
+$server = new McpServer('opnsense-mcp', '1.0.0');
 
 // Register tool classes (they will be added in Phase 2+)
 $toolFiles = glob(__DIR__ . '/../tools/*.php');
