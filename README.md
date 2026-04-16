@@ -23,22 +23,21 @@ Existing OPNsense MCP servers only support a single firewall per server instance
 
 ## Quick Start
 
-### 1. Clone
+### 1. Download
+
+Download the PHAR (single file, no dependencies):
 
 ```bash
-git clone https://github.com/pacyworld/opnsense-mcp.git
-cd opnsense-mcp
+curl -LO https://github.com/pacyworld/opnsense-mcp/releases/latest/download/opnsense-mcp.phar
+chmod +x opnsense-mcp.phar
+sudo mv opnsense-mcp.phar /usr/local/bin/
 ```
+
+Or clone the repo for development — see [Development](#development) below.
 
 ### 2. Configure
 
-Copy the sample config and add your OPNsense instances:
-
-```bash
-cp config/instances.json.sample config/instances.json
-```
-
-Edit `config/instances.json`:
+Create an `instances.json` file:
 
 ```json
 {
@@ -73,8 +72,7 @@ Add to your MCP server configuration:
 ```json
 {
     "opnsense": {
-        "command": "php",
-        "args": ["/path/to/opnsense-mcp/bin/opnsense-mcp"],
+        "command": "/usr/local/bin/opnsense-mcp.phar",
         "env": {
             "OPNSENSE_CONFIG": "/path/to/instances.json"
         }
@@ -90,8 +88,7 @@ Add to `claude_desktop_config.json`:
 {
     "mcpServers": {
         "opnsense": {
-            "command": "php",
-            "args": ["/path/to/opnsense-mcp/bin/opnsense-mcp"],
+            "command": "/usr/local/bin/opnsense-mcp.phar",
             "env": {
                 "OPNSENSE_CONFIG": "/path/to/instances.json"
             }
@@ -99,6 +96,8 @@ Add to `claude_desktop_config.json`:
     }
 }
 ```
+
+> **Tip:** If your system doesn't support the PHAR shebang, use `"command": "php"` with `"args": ["/usr/local/bin/opnsense-mcp.phar"]` instead.
 
 ### 4. Use
 
@@ -147,6 +146,13 @@ vendor/bin/phpunit --colors=always
 
 # Syntax check
 find classes tools bin -name "*.php" | xargs -n1 php -l
+```
+
+### Building the PHAR
+
+```bash
+php -d phar.readonly=0 bin/build-phar.php
+# Output: build/opnsense-mcp.phar (~97 KB)
 ```
 
 ### Project Structure

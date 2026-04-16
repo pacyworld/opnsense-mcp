@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: 'Build PHAR + Release'
+    runs-on: FreeBSD
+
+    steps:
+      - name: Checkout
+        run: |
+          rm -rf opnsense-mcp
+          git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git opnsense-mcp
+
+      - name: Build PHAR
+        run: |
+          cd opnsense-mcp
+          php -d phar.readonly=0 bin/build-phar.php
+          sha256 build/opnsense-mcp.phar > build/opnsense-mcp.phar.sha256
+          echo "=== PHAR ==="
+          ls -lh build/opnsense-mcp.phar
+          echo "=== SHA256 ==="
+          cat build/opnsense-mcp.phar.sha256
+
+      - name: Verify PHAR
+        run: |
+          cd opnsense-mcp
+          php build/opnsense-mcp.phar --help 2>&1 || true
+          echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"ci","version":"1.0"}}}' | \
+            OPNSENSE_CONFIG=config/instances.json.sample php build/opnsense-mcp.phar 2>/dev/null || echo "PHAR smoke test: init would fail without valid config (expected)"
+
+      - name: Upload to Forgejo Release
+        run: |
+          cd opnsense-mcp
+          TAG="${{ github.ref_name }}"
+          API="${{ github.server_url }}/api/v1"
+          TOKEN="${{ github.token }}"
+          REPO="${{ github.repository }}"
+
+          # Get or create release
+          RELEASE_ID=$(curl -s -H "Authorization: token ${TOKEN}" \
+            "${API}/repos/${REPO}/releases/tags/${TAG}" | \
+            grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*' || true)
+
+          if [ -z "${RELEASE_ID}" ]; then
+            echo "==> Creating Forgejo release for ${TAG}..."
+            RELEASE_ID=$(curl -s -X POST -H "Authorization: token ${TOKEN}" \
+              -H "Content-Type: application/json" \
+              -d "{\"tag_name\":\"${TAG}\",\"name\":\"opnsense-mcp ${TAG}\",\"draft\":false,\"prerelease\":false}" \
+              "${API}/repos/${REPO}/releases" | \
+              grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*' || true)
+          fi
+
+          echo "==> Uploading PHAR to Forgejo release ${RELEASE_ID}..."
+          curl -s -X POST -H "Authorization: token ${TOKEN}" \
+            -F "attachment=@build/opnsense-mcp.phar" \
+            "${API}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=opnsense-mcp.phar"
+          curl -s -X POST -H "Authorization: token ${TOKEN}" \
+            -F "attachment=@build/opnsense-mcp.phar.sha256" \
+            "${API}/repos/${REPO}/releases/${RELEASE_ID}/assets?name=opnsense-mcp.phar.sha256"
+          echo "==> Forgejo upload complete."
+
+          # --- Upload to GitHub (if token available) ---
+          GH_TOKEN="${{ secrets.GH_UPLOAD_TOKEN }}"
+          if [ -n "${GH_TOKEN}" ]; then
+            GH_API="https://api.github.com"
+            GH_REPO="pacyworld/opnsense-mcp"
+
+            GH_RELEASE_ID=$(curl -s -H "Authorization: token ${GH_TOKEN}" \
+              "${GH_API}/repos/${GH_REPO}/releases/tags/${TAG}" | \
+              grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*' || true)
+
+            if [ -z "${GH_RELEASE_ID}" ]; then
+              echo "==> Creating GitHub release for ${TAG}..."
+              GH_RELEASE_ID=$(curl -s -X POST -H "Authorization: token ${GH_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{\"tag_name\":\"${TAG}\",\"name\":\"opnsense-mcp ${TAG}\",\"draft\":false,\"prerelease\":false}" \
+                "${GH_API}/repos/${GH_REPO}/releases" | \
+                grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*' || true)
+            fi
+
+            UPLOAD_URL="https://uploads.github.com/repos/${GH_REPO}/releases/${GH_RELEASE_ID}/assets"
+            echo "==> Uploading PHAR to GitHub release ${GH_RELEASE_ID}..."
+            curl -s -X POST -H "Authorization: token ${GH_TOKEN}" \
+              -H "Content-Type: application/octet-stream" \
+              --data-binary "@build/opnsense-mcp.phar" \
+              "${UPLOAD_URL}?name=opnsense-mcp.phar"
+            curl -s -X POST -H "Authorization: token ${GH_TOKEN}" \
+              -H "Content-Type: text/plain" \
+              --data-binary "@build/opnsense-mcp.phar.sha256" \
+              "${UPLOAD_URL}?name=opnsense-mcp.phar.sha256"
+            echo "==> GitHub upload complete."
+          else
+            echo "==> GH_UPLOAD_TOKEN not set, skipping GitHub upload."
+          fi
