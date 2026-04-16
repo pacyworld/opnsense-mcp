@@ -33,9 +33,10 @@ jobs:
             fi
           done
 
-          # PHPUnit from system packages
-          if ! pkg info -e phpunit11 2>/dev/null; then
-            NEEDED="${NEEDED} phpunit11"
+          # PHPUnit from system packages (package name includes PHP version suffix)
+          PHPUNIT_PKG="phpunit11-${PHP_PKG}"
+          if ! pkg info -e "${PHPUNIT_PKG}" 2>/dev/null; then
+            NEEDED="${NEEDED} ${PHPUNIT_PKG}"
           fi
 
           if [ -n "$NEEDED" ]; then
