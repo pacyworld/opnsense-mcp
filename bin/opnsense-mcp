@@ -18,32 +18,22 @@
  * @license    BSD-2-Clause
  */
 
-// Use Composer autoload if available, otherwise standalone
-if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
-    require __DIR__ . '/../vendor/autoload.php';
-} else {
-    spl_autoload_register(function ($class) {
-        $prefixes = [
-            'Mcp\\' => __DIR__ . '/../classes/Mcp/',
-            'OPNsense\\' => __DIR__ . '/../classes/OPNsense/',
-        ];
-        foreach ($prefixes as $prefix => $baseDir) {
-            if (strncmp($prefix, $class, strlen($prefix)) === 0) {
-                $relativeClass = substr($class, strlen($prefix));
-                $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
-                if (file_exists($file)) {
-                    require $file;
-                    return;
-                }
-            }
-        }
-        // Tool classes (no namespace, in tools/ directory)
-        $toolFile = __DIR__ . '/../tools/' . $class . '.php';
-        if (file_exists($toolFile)) {
-            require $toolFile;
-        }
-    });
-}
+// Enchilada Framework bootstrap
+chdir(dirname(__DIR__));
+require __DIR__ . '/../system/app.conf.php';
+require __DIR__ . '/../system/autoload.inc.php';
+
+// Tool classes live in tools/ (no namespace) — add to autoloader search path
+spl_autoload_register(function ($class) {
+    // Only handle non-namespaced tool classes
+    if (str_contains($class, '\\')) {
+        return;
+    }
+    $toolFile = APPLICATION_ROOT . 'tools/' . $class . '.php';
+    if (file_exists($toolFile)) {
+        require $toolFile;
+    }
+});
 
 use Mcp\McpServer;
 use OPNsense\InstanceManager;

@@ -15,8 +15,8 @@ namespace OPNsense;
 /**
  * Client - OPNsense REST API HTTP client.
  *
- * Thin cURL wrapper that handles authentication, JSON encoding/decoding,
- * and error handling for the OPNsense API.
+ * Uses EnchiladaHTTP for HTTP transport. Handles authentication,
+ * JSON encoding/decoding, and error handling for the OPNsense API.
  *
  * Example usage:
  * ```php
@@ -35,18 +35,11 @@ class Client
     private string $baseUrl;
 
     /**
-     * API key for authentication.
+     * EnchiladaHTTP instance for real HTTP requests.
      *
-     * @var string
+     * @var \EnchiladaHTTP
      */
-    private string $apiKey;
-
-    /**
-     * API secret for authentication.
-     *
-     * @var string
-     */
-    private string $apiSecret;
+    private \EnchiladaHTTP $http;
 
     /**
      * Whether to verify SSL certificates.
@@ -54,13 +47,6 @@ class Client
      * @var bool
      */
     private bool $verifySsl;
-
-    /**
-     * Request timeout in seconds.
-     *
-     * @var int
-     */
-    private int $timeout;
 
     /**
      * Optional HTTP client callable for dependency injection in tests.
@@ -90,11 +76,13 @@ class Client
         ?callable $httpClient = null
     ) {
         $this->baseUrl = rtrim($baseUrl, '/');
-        $this->apiKey = $apiKey;
-        $this->apiSecret = $apiSecret;
         $this->verifySsl = $verifySsl;
-        $this->timeout = $timeout;
         $this->httpClient = $httpClient;
+
+        // Configure EnchiladaHTTP for the OPNsense API endpoint
+        $this->http = new \EnchiladaHTTP($this->baseUrl);
+        $this->http->setPlaintextAuth($apiKey, $apiSecret);
+        $this->http->setTimeout($timeout);
     }
 
     /**
@@ -156,52 +144,44 @@ class Client
             return $this->handleResponse($response['code'], $response['body'], $url);
         }
 
-        return $this->curlRequest($method, $url, $headers, $body);
+        return $this->enchiladaRequest($method, $endpoint, $data, $headers);
     }
 
     /**
-     * Execute an HTTP request using cURL.
+     * Execute an HTTP request via EnchiladaHTTP.
      *
-     * @param  string      $method  HTTP method
-     * @param  string      $url     Full URL
-     * @param  array       $headers HTTP headers
-     * @param  string|null $body    Request body
+     * @param  string     $method   HTTP method
+     * @param  string     $endpoint API endpoint relative to /api/
+     * @param  array|null $data     Request body data
+     * @param  array      $headers  Extra HTTP headers
      * @return array                 Decoded JSON response
      * @throws ClientException       On connection or HTTP errors
      */
-    private function curlRequest(string $method, string $url, array $headers, ?string $body): array
+    private function enchiladaRequest(string $method, string $endpoint, ?array $data, array $headers): array
     {
-        $ch = curl_init();
+        $apiPath = 'api/' . ltrim($endpoint, '/');
 
-        curl_setopt_array($ch, [
-            CURLOPT_URL => $url,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER => $headers,
-            CURLOPT_USERPWD => $this->apiKey . ':' . $this->apiSecret,
-            CURLOPT_SSL_VERIFYPEER => $this->verifySsl,
-            CURLOPT_SSL_VERIFYHOST => $this->verifySsl ? 2 : 0,
-            CURLOPT_TIMEOUT => $this->timeout,
-            CURLOPT_CONNECTTIMEOUT => 10,
-        ]);
-
-        if ($method === 'POST') {
-            curl_setopt($ch, CURLOPT_POST, true);
-            if ($body !== null) {
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
-            }
+        try {
+            $result = $this->http->call(
+                $apiPath,
+                $data,
+                $method,
+                $headers,
+                null,
+                'json'
+            );
+        } catch (\Exception $e) {
+            throw new ClientException("HTTP error: " . $e->getMessage(), 0);
         }
 
-        $responseBody = curl_exec($ch);
-        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        $error = curl_error($ch);
-        $errno = curl_errno($ch);
-        curl_close($ch);
-
-        if ($errno !== 0) {
-            throw new ClientException("cURL error ({$errno}): {$error}", $errno);
+        if ($result === false) {
+            throw new ClientException(
+                "Request failed for {$this->baseUrl}/{$apiPath}",
+                0
+            );
         }
 
-        return $this->handleResponse($httpCode, $responseBody, $url);
+        return $result ?? [];
     }
 
     /**

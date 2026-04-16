@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
 
 jobs:
   test:
@@ -27,32 +27,33 @@ jobs:
           echo "PHP package prefix: ${PHP_PKG}"
 
           NEEDED=""
-          for ext in curl dom mbstring phar tokenizer xml xmlwriter composer; do
+          for ext in curl dom mbstring tokenizer xml xmlwriter; do
             if ! pkg info -e "${PHP_PKG}-${ext}" 2>/dev/null; then
               NEEDED="${NEEDED} ${PHP_PKG}-${ext}"
             fi
           done
 
+          # PHPUnit from system packages
+          if ! pkg info -e phpunit11 2>/dev/null; then
+            NEEDED="${NEEDED} phpunit11"
+          fi
+
           if [ -n "$NEEDED" ]; then
             echo "Installing:${NEEDED}"
             doas pkg install -y ${NEEDED}
-            # Enable newly installed extensions
             for ini in /usr/local/etc/php/ext-*.ini.sample; do
               target="${ini%.sample}"
               [ ! -f "$target" ] && doas cp "$ini" "$target"
             done
           else
-            echo "All PHP extensions already installed"
+            echo "All dependencies already installed"
           fi
 
           php -v
-          which composer && composer --version
+          phpunit --version
 
       - name: PHP syntax check
-        run: find opnsense-mcp/classes opnsense-mcp/tools opnsense-mcp/bin -name "*.php" | xargs -n1 php -l
-
-      - name: Install dev dependencies
-        run: cd opnsense-mcp && composer install --no-interaction --prefer-dist
+        run: find opnsense-mcp/classes opnsense-mcp/tools opnsense-mcp/bin opnsense-mcp/system opnsense-mcp/libraries -name "*.php" | xargs -n1 php -l
 
       - name: Run tests
-        run: cd opnsense-mcp && vendor/bin/phpunit --colors=always
+        run: cd opnsense-mcp && phpunit --colors=always

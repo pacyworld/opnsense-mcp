@@ -1,6 +1,5 @@
-/vendor/
-/composer.lock
 /build/
+/temp/
 /.phpunit.cache/
 /config/instances.json
 .DS_Store

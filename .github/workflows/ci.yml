@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [master]
   pull_request:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -23,12 +23,10 @@ jobs:
         with:
           php-version: ${{ matrix.php-version }}
           extensions: curl, json, dom, mbstring, xml, tokenizer
-
-      - name: Install dependencies
-        run: composer install --no-interaction --prefer-dist
+          tools: phpunit:11
 
       - name: PHP syntax check
-        run: find classes tools bin -name "*.php" | xargs -n1 php -l
+        run: find classes tools bin system libraries -name "*.php" | xargs -n1 php -l
 
       - name: Run tests
-        run: vendor/bin/phpunit --colors=always
+        run: phpunit --colors=always
