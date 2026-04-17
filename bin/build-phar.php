@@ -58,12 +58,17 @@ $addDir = function (string $dir, string $prefix = '') use ($phar, $projectRoot) 
 };
 
 $total = 0;
-$total += $addDir($projectRoot . '/classes');
-echo "  Added classes/ ({$total} files)\n";
+$classCount = $addDir($projectRoot . '/classes');
+$total += $classCount;
+echo "  Added classes/ ({$classCount} files)\n";
 
 $toolCount = $addDir($projectRoot . '/tools');
 $total += $toolCount;
 echo "  Added tools/ ({$toolCount} files)\n";
+
+$libCount = $addDir($projectRoot . '/libraries');
+$total += $libCount;
+echo "  Added libraries/ ({$libCount} files)\n";
 
 // Add config sample
 $phar->addFile($projectRoot . '/config/instances.json.sample', 'config/instances.json.sample');
@@ -85,8 +90,15 @@ $stub = <<<'STUB'
 
 Phar::mapPhar('opnsense-mcp.phar');
 
+// Application constants required by EnchiladaHTTP
+define('APPLICATION_NAME', 'OPNsenseMCP');
+define('APPLICATION_VERSION', '1.0.0');
+define('APPLICATION_DEBUG', false);
+define('APPLICATION_USERAGENT', sprintf('%s/%s (PHAR; %s) PHP %s', APPLICATION_NAME, APPLICATION_VERSION, php_uname('s'), phpversion()));
+
 // Autoloader
 spl_autoload_register(function ($class) {
+    // Namespaced classes (Mcp\*, OPNsense\*) — .class.php extension
     $prefixes = [
         'Mcp\\' => 'phar://opnsense-mcp.phar/classes/Mcp/',
         'OPNsense\\' => 'phar://opnsense-mcp.phar/classes/OPNsense/',
@@ -94,17 +106,25 @@ spl_autoload_register(function ($class) {
     foreach ($prefixes as $prefix => $baseDir) {
         if (strncmp($prefix, $class, strlen($prefix)) === 0) {
             $relativeClass = substr($class, strlen($prefix));
-            $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.php';
+            $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.class.php';
             if (file_exists($file)) {
                 require $file;
                 return;
             }
         }
     }
-    // Tool classes (no namespace)
-    $toolFile = 'phar://opnsense-mcp.phar/tools/' . $class . '.php';
-    if (file_exists($toolFile)) {
-        require $toolFile;
+    // Non-namespaced classes: tool classes (.php) and libraries (.class.php)
+    if (!str_contains($class, '\\')) {
+        $toolFile = 'phar://opnsense-mcp.phar/tools/' . $class . '.php';
+        if (file_exists($toolFile)) {
+            require $toolFile;
+            return;
+        }
+        $libFile = 'phar://opnsense-mcp.phar/libraries/' . $class . '/' . $class . '.class.php';
+        if (file_exists($libFile)) {
+            require $libFile;
+            return;
+        }
     }
 });
 
