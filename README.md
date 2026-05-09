@@ -241,6 +241,17 @@ IDE (Windsurf/Cursor/Claude) ──stdio──> php bin/opnsense-mcp ──HTTPS
 
 The MCP server runs as a local child process, communicating via stdin/stdout JSON-RPC 2.0. HTTP traffic is outbound only — from the PHP process to your OPNsense firewalls' REST APIs.
 
+## Donations
+
+If you find this project useful, consider a small donation:
+
+| Currency | Address |
+|---|---|
+| **BTC** | `1B6eyXVRPxdEitW5vWrUnzzXUy6o38P9wN` |
+| **LTC** | `MCrnhTAHA3n6X8jUJQj9hed5CT585sJExQ` |
+| **PEPE (Ᵽ)** | `Pk3WZshXxi656RNNoVuZTCERVhhv4pyPJS` |
+| **DOGE** | `DQgDGexy5tJ4StbMdyGwgfyxhcAGTRrPVB` |
+
 ## License
 
 BSD 2-Clause — see [LICENSE](LICENSE).
