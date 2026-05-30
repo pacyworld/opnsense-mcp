@@ -13,9 +13,7 @@ jobs:
 
     steps:
       - name: Checkout
-        run: |
-          rm -rf opnsense-mcp
-          git clone --depth 1 --branch ${{ github.ref_name }} ${{ github.server_url }}/${{ github.repository }}.git opnsense-mcp
+        uses: actions/checkout@v4
 
       - name: Install PHP dependencies
         run: |
@@ -54,7 +52,7 @@ jobs:
           phpunit --version
 
       - name: PHP syntax check
-        run: find opnsense-mcp/classes opnsense-mcp/tools opnsense-mcp/bin opnsense-mcp/system opnsense-mcp/libraries -name "*.php" | xargs -n1 php -l
+        run: find classes tools bin system libraries -name "*.php" | xargs -n1 php -l
 
       - name: Run tests
-        run: cd opnsense-mcp && phpunit --colors=always
+        run: phpunit --colors=always
