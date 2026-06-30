@@ -38,7 +38,7 @@ class VpnTools
      * @param  string $instance Instance name (empty = default)
      * @return array             VPN status data
      */
-    #[McpTool(description: 'Get VPN tunnel status. Types: all, wireguard, openvpn, ipsec')]
+    #[McpTool(readOnlyHint: true, description: 'Get VPN tunnel status. Types: all, wireguard, openvpn, ipsec')]
     public function vpn_status(string $type = 'all', string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

@@ -37,7 +37,7 @@ class InterfaceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Interface list
      */
-    #[McpTool(description: 'List all network interfaces with status, addresses, and configuration from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List all network interfaces with status, addresses, and configuration from an OPNsense instance')]
     public function interfaces(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

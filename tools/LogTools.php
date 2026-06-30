@@ -38,7 +38,7 @@ class LogTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Firewall log entries
      */
-    #[McpTool(description: 'Get recent firewall log entries showing blocked and passed packets')]
+    #[McpTool(readOnlyHint: true, description: 'Get recent firewall log entries showing blocked and passed packets')]
     public function firewall_log(int $limit = 50, string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -65,7 +65,7 @@ class LogTools
      * @param  string $instance Instance name (empty = default)
      * @return array             System log entries
      */
-    #[McpTool(description: 'Get recent system log entries from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'Get recent system log entries from an OPNsense instance')]
     public function system_log(int $limit = 50, string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

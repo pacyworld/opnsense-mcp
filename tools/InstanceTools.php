@@ -39,7 +39,7 @@ class InstanceTools
      *
      * @return array Instance list with names, URLs, descriptions, and default status
      */
-    #[McpTool(description: 'List all configured OPNsense firewall instances')]
+    #[McpTool(readOnlyHint: true, description: 'List all configured OPNsense firewall instances')]
     public function list_instances(): array
     {
         return [
@@ -55,7 +55,7 @@ class InstanceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Instance info with system and firmware data
      */
-    #[McpTool(description: 'Get detailed info about an OPNsense instance including live system and firmware status')]
+    #[McpTool(readOnlyHint: true, description: 'Get detailed info about an OPNsense instance including live system and firmware status')]
     public function instance_info(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

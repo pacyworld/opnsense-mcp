@@ -37,7 +37,7 @@ class SystemTools
      * @param  string $instance Instance name (empty = default)
      * @return array             System status data
      */
-    #[McpTool(description: 'Get OPNsense system status including product version, architecture, and update availability')]
+    #[McpTool(readOnlyHint: true, description: 'Get OPNsense system status including product version, architecture, and update availability')]
     public function system_status(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -69,7 +69,7 @@ class SystemTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Firmware details with update info
      */
-    #[McpTool(description: 'Get detailed firmware information and check for available updates on an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'Get detailed firmware information and check for available updates on an OPNsense instance')]
     public function firmware_status(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

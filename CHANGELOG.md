@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.0.1] - 2026-06-30
+
+### Added
+- MCP tool annotations (`readOnlyHint`) on read-only tools: arp_table, gateway_status, routing_table, ndp_table, service_list, system_status, firmware_status, dhcp_leases, backup_list, list_instances, instance_info, interfaces, firewall_log, system_log, vpn_status. Patched directly into the internal `Mcp\McpTool`/`Mcp\ToolRegistry` classes (this server predates the canonical EnchiladaMCP library). Multi-action tools (list/get/create/update/delete in one tool) are intentionally left untagged since they can mutate state depending on the `action` parameter.
+
 ## [1.0.0] - 2026-04-16
 
 ### Added

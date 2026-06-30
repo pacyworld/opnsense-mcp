@@ -84,11 +84,24 @@ class ToolRegistry
                 $inputSchema = $this->buildSchemaFromMethod($method);
             }
             
-            $this->tools[$toolName] = [
+            $tool = [
                 'name' => $toolName,
                 'description' => $description ?: "Tool: {$toolName}",
                 'inputSchema' => $inputSchema,
             ];
+
+            $annotations = array_filter([
+                'readOnlyHint' => $attr->readOnlyHint,
+                'destructiveHint' => $attr->destructiveHint,
+                'idempotentHint' => $attr->idempotentHint,
+                'openWorldHint' => $attr->openWorldHint,
+            ], fn($v) => $v !== null);
+
+            if (!empty($annotations)) {
+                $tool['annotations'] = $annotations;
+            }
+
+            $this->tools[$toolName] = $tool;
             
             $this->handlers[$toolName] = [$handler, $method->getName()];
         }

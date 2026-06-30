@@ -6,7 +6,7 @@
 
 // Application Info
 define('APPLICATION_NAME', 'OPNsenseMCP');
-define('APPLICATION_VERSION', '1.0.0');
+define('APPLICATION_VERSION', '1.0.1');
 define('APPLICATION_WEBSITE', 'https://pacyworld.dev/pacyworld/opnsense-mcp');
 
 // Directory Structure

@@ -37,7 +37,7 @@ class ServiceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Service list with running/locked status
      */
-    #[McpTool(description: 'List all services and their running status on an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List all services and their running status on an OPNsense instance')]
     public function service_list(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

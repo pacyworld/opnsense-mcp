@@ -37,7 +37,7 @@ class BackupTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Backup list
      */
-    #[McpTool(description: 'List available configuration backups on an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List available configuration backups on an OPNsense instance')]
     public function backup_list(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
