@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.0] - 2026-09-09
 
 ### Changed
 - Replaced the internal `Mcp\*` protocol core with the canonical vendored Enchilada libraries: `EnchiladaMCP` (protocol core), `Enchilada\Tortilla` (stdio transport, loop-aware `HttpClient`), and `EnchiladaMultiHTTP` for the OPNsense API client. Tool names, descriptions, schemas, and annotations are unchanged. Unknown-tool calls now return tool-level error results with closest-name suggestions instead of protocol errors, and protocol version negotiation follows the shared core (2025-06-18 echoed, `2025-11-25` ceiling for the legacy handshake).

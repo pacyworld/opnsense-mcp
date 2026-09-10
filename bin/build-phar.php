@@ -74,6 +74,12 @@ echo "  Added libraries/ ({$libCount} files)\n";
 $phar->addFile($projectRoot . '/config/instances.json.sample', 'config/instances.json.sample');
 $total++;
 
+// Version from the application config (the stub is a heredoc, so the
+// value is substituted below rather than interpolated here)
+$versionSource = file_get_contents($projectRoot . '/system/app.conf.php');
+preg_match("/define\\('APPLICATION_VERSION', '([^']+)'\\)/", $versionSource, $vMatch);
+$appVersion = $vMatch[1] ?? '0.0.0';
+
 echo "  Added config/instances.json.sample\n";
 echo "  Total: {$total} files\n";
 
@@ -180,7 +186,7 @@ debug("Loaded {$instanceCount} instance(s) from {$configPath} (default: {$manage
 
 // --- Create MCP Server ---
 
-$server = new McpServer('opnsense-mcp', '1.0.0');
+$server = new McpServer('opnsense-mcp', APPLICATION_VERSION);
 
 // Register all tool classes
 $toolClasses = [
@@ -221,6 +227,8 @@ debug("MCP server stopped");
 
 __HALT_COMPILER();
 STUB;
+
+$stub = str_replace("'1.0.0'", "'{$appVersion}'", $stub);
 
 $phar->setStub($stub);
 $phar->stopBuffering();
