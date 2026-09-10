@@ -12,11 +12,24 @@
 
 namespace OPNsense;
 
+// EnchiladaMultiHTTP lives in the HTTP/ library directory but the
+// class name matches no vendored file or directory name, so the
+// framework autoloader's guess patterns miss it and spl_autoload
+// lowercases on case-sensitive filesystems.
+if (!class_exists('EnchiladaMultiHTTP', false)) {
+    require_once dirname(__DIR__, 2) . '/libraries/HTTP/EnchiladaMultiHTTP.class.php';
+}
+
 /**
  * Client - OPNsense REST API HTTP client.
  *
- * Uses EnchiladaHTTP for HTTP transport. Handles authentication,
+ * Uses Enchilada\Tortilla\HttpClient (loop-aware facade over
+ * EnchiladaMultiHTTP) for HTTP transport. Handles authentication,
  * JSON encoding/decoding, and error handling for the OPNsense API.
+ * When an EventLoop is injected and the caller runs inside a transport
+ * dispatch fiber, API waits park the fiber instead of blocking the
+ * server; otherwise the client's poll loop keeps progress notifications
+ * flowing during long waits (Windows stdio).
  *
  * Example usage:
  * ```php
@@ -35,11 +48,11 @@ class Client
     private string $baseUrl;
 
     /**
-     * EnchiladaHTTP instance for real HTTP requests.
+     * Loop-aware HTTP transport for real HTTP requests.
      *
-     * @var \EnchiladaHTTP
+     * @var \Enchilada\Tortilla\HttpClient
      */
-    private \EnchiladaHTTP $http;
+    private \Enchilada\Tortilla\HttpClient $http;
 
     /**
      * Whether to verify SSL certificates.
@@ -66,6 +79,10 @@ class Client
      * @param bool          $verifySsl  Verify SSL certificates (default: false)
      * @param int           $timeout    Request timeout in seconds (default: 30)
      * @param callable|null $httpClient Optional HTTP callable for testing
+     * @param \Enchilada\Tortilla\EventLoop|null $loop    Event loop shared with the stdio transport;
+     *                                                    API waits park the dispatch fiber on it
+     * @param callable|null $progress   function(): void — emits a progress
+     *                                                    notification during blocking-mode API waits
      */
     public function __construct(
         string $baseUrl,
@@ -73,17 +90,20 @@ class Client
         string $apiSecret,
         bool $verifySsl = false,
         int $timeout = 30,
-        ?callable $httpClient = null
+        ?callable $httpClient = null,
+        ?\Enchilada\Tortilla\EventLoop $loop = null,
+        ?callable $progress = null
     ) {
         $this->baseUrl = rtrim($baseUrl, '/');
         $this->verifySsl = $verifySsl;
         $this->httpClient = $httpClient;
 
-        // Configure EnchiladaHTTP for the OPNsense API endpoint
-        $this->http = new \EnchiladaHTTP($this->baseUrl);
-        $this->http->setPlaintextAuth($apiKey, $apiSecret);
-        $this->http->setTimeout($timeout);
-        $this->http->setVerifySsl($verifySsl);
+        // Configure the multi client behind Tortilla\HttpClient
+        $multi = new \EnchiladaMultiHTTP($this->baseUrl);
+        $multi->setPlaintextAuth($apiKey, $apiSecret);
+        $multi->setTimeout($timeout);
+        $multi->setVerifySsl($verifySsl);
+        $this->http = new \Enchilada\Tortilla\HttpClient($multi, $loop, $progress);
     }
 
     /**
@@ -149,7 +169,7 @@ class Client
     }
 
     /**
-     * Execute an HTTP request via EnchiladaHTTP.
+     * Execute an HTTP request via the loop-aware HTTP transport.
      *
      * @param  string     $method   HTTP method
      * @param  string     $endpoint API endpoint relative to /api/
@@ -175,9 +195,13 @@ class Client
             throw new ClientException("HTTP error: " . $e->getMessage(), 0);
         }
 
-        if ($result === false) {
+        // null is the transport-failure slot in curl_multi outcomes
+        // (EnchiladaHTTP surfaced the same case as false).
+        if ($result === false || $result === null) {
+            $curlError = $this->http->getLastCurlError();
             throw new ClientException(
-                "Request failed for {$this->baseUrl}/{$apiPath}",
+                "Request failed for {$this->baseUrl}/{$apiPath}"
+                    . ($curlError !== '' ? ": {$curlError}" : ''),
                 0
             );
         }

@@ -98,15 +98,17 @@ define('APPLICATION_USERAGENT', sprintf('%s/%s (PHAR; %s) PHP %s', APPLICATION_N
 
 // Autoloader
 spl_autoload_register(function ($class) {
-    // Namespaced classes (Mcp\*, OPNsense\*) — .class.php extension
+    // Namespaced classes (OPNsense\*, EnchiladaMCP\*, Enchilada\Tortilla\*).
+    // Tortilla ships plain .php files; the others use .class.php.
     $prefixes = [
-        'Mcp\\' => 'phar://opnsense-mcp.phar/classes/Mcp/',
-        'OPNsense\\' => 'phar://opnsense-mcp.phar/classes/OPNsense/',
+        'OPNsense\\' => ['phar://opnsense-mcp.phar/classes/OPNsense/', '.class.php'],
+        'EnchiladaMCP\\' => ['phar://opnsense-mcp.phar/libraries/EnchiladaMCP/', '.class.php'],
+        'Enchilada\\Tortilla\\' => ['phar://opnsense-mcp.phar/libraries/Enchilada/Tortilla/', '.php'],
     ];
-    foreach ($prefixes as $prefix => $baseDir) {
+    foreach ($prefixes as $prefix => [$baseDir, $suffix]) {
         if (strncmp($prefix, $class, strlen($prefix)) === 0) {
             $relativeClass = substr($class, strlen($prefix));
-            $file = $baseDir . str_replace('\\', '/', $relativeClass) . '.class.php';
+            $file = $baseDir . str_replace('\\', '/', $relativeClass) . $suffix;
             if (file_exists($file)) {
                 require $file;
                 return;
@@ -120,15 +122,12 @@ spl_autoload_register(function ($class) {
             require $toolFile;
             return;
         }
-        $libFile = 'phar://opnsense-mcp.phar/libraries/' . $class . '/' . $class . '.class.php';
-        if (file_exists($libFile)) {
-            require $libFile;
-            return;
-        }
     }
 });
 
-use Mcp\McpServer;
+use EnchiladaMCP\McpServer;
+use Enchilada\Tortilla\ComalEventLoop;
+use Enchilada\Tortilla\StdioTransport;
 use OPNsense\InstanceManager;
 
 // --- Configuration ---
@@ -198,31 +197,25 @@ foreach ($toolClasses as $className) {
 
 debug("MCP server started (stdio transport, PHAR)");
 
-// --- Main Loop ---
+// --- Run ---
 
-while (($line = fgets(STDIN)) !== false) {
-    $line = trim($line);
-    if (empty($line)) {
-        continue;
-    }
+// The application owns the event loop (strict opt-in): shared with
+// the stdio transport (reactor I/O) and the tools' HTTP path, where
+// Tortilla\HttpClient parks the dispatch fiber on it during OPNsense
+// API waits. null without vendored Comal: blocking I/O, progress flow
+// via the HttpClient poll loop.
+$loop = ComalEventLoop::create();
+$manager->setHttpTransport($loop, $server->tick(...));
 
-    debug("Received: " . substr($line, 0, 200) . (strlen($line) > 200 ? '...' : ''));
-
-    $request = json_decode($line, true);
-    if ($request === null) {
-        debug("Invalid JSON received");
-        continue;
-    }
-
-    $response = $server->handleRequest($request);
-
-    if (!empty($response)) {
-        $output = json_encode($response, JSON_UNESCAPED_SLASHES);
-        debug("Sending: " . substr($output, 0, 200) . (strlen($output) > 200 ? '...' : ''));
-        fwrite(STDOUT, $output . "\n");
-        fflush(STDOUT);
-    }
+// Primitives in (handler, progress emitter), notifier back out —
+// only the composition root knows both sides of the contract.
+$transport = new StdioTransport($server->handleRequest(...), $server->tick(...));
+$transport->setLogger('debug');
+if ($loop !== null) {
+    $transport->setLoop($loop);      // opts into reactor I/O
 }
+$server->setNotifier($transport->sendNotification(...));
+$transport->run();
 
 debug("MCP server stopped");
 
