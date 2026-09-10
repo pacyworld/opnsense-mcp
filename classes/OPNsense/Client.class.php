@@ -12,14 +12,6 @@
 
 namespace OPNsense;
 
-// EnchiladaMultiHTTP lives in the HTTP/ library directory but the
-// class name matches no vendored file or directory name, so the
-// framework autoloader's guess patterns miss it and spl_autoload
-// lowercases on case-sensitive filesystems.
-if (!class_exists('EnchiladaMultiHTTP', false)) {
-    require_once dirname(__DIR__, 2) . '/libraries/HTTP/EnchiladaMultiHTTP.class.php';
-}
-
 /**
  * Client - OPNsense REST API HTTP client.
  *
