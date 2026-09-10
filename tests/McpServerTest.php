@@ -1,6 +1,7 @@
 <?php
 /**
- * Tests for Mcp\McpServer — JSON-RPC protocol compliance.
+ * Tests for the vendored EnchiladaMCP\McpServer — JSON-RPC protocol
+ * compliance against the shared protocol core (transport split).
  *
  * @package    OPNsenseMCP\Tests
  * @author     Daniel Morante
@@ -10,8 +11,8 @@
 
 namespace Tests;
 
-use Mcp\McpServer;
-use Mcp\McpTool;
+use EnchiladaMCP\McpServer;
+use EnchiladaMCP\McpTool;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -49,7 +50,7 @@ class McpServerTest extends TestCase
             'id' => 1,
             'method' => 'initialize',
             'params' => [
-                'protocolVersion' => '2025-03-26',
+                'protocolVersion' => '2025-06-18',
                 'capabilities' => [],
                 'clientInfo' => ['name' => 'test', 'version' => '1.0'],
             ],
@@ -58,10 +59,27 @@ class McpServerTest extends TestCase
         $this->assertEquals('2.0', $response['jsonrpc']);
         $this->assertEquals(1, $response['id']);
         $this->assertArrayHasKey('result', $response);
-        $this->assertEquals('2025-03-26', $response['result']['protocolVersion']);
+        // A supported client version is echoed back
+        $this->assertEquals('2025-06-18', $response['result']['protocolVersion']);
         $this->assertArrayHasKey('tools', $response['result']['capabilities']);
         $this->assertEquals('test-server', $response['result']['serverInfo']['name']);
         $this->assertEquals('1.0.0', $response['result']['serverInfo']['version']);
+    }
+
+    public function testInitializeCapsUnsupportedClientVersion(): void
+    {
+        $response = $this->server->handleRequest([
+            'jsonrpc' => '2.0',
+            'id' => 11,
+            'method' => 'initialize',
+            'params' => [
+                'protocolVersion' => '1999-01-01',
+                'capabilities' => [],
+                'clientInfo' => ['name' => 'test', 'version' => '1.0'],
+            ],
+        ]);
+
+        $this->assertEquals(McpServer::LEGACY_PROTOCOL_VERSION, $response['result']['protocolVersion']);
     }
 
     public function testNotificationReturnsEmptyArray(): void
@@ -96,7 +114,7 @@ class McpServerTest extends TestCase
         $greet = $tools[array_search('greet', $toolNames)];
         $this->assertEquals('Returns a greeting', $greet['description']);
         $this->assertEquals('object', $greet['inputSchema']['type']);
-        $this->assertArrayHasKey('name', $greet['inputSchema']['properties']);
+        $this->assertArrayHasKey('name', (array) $greet['inputSchema']['properties']);
         $this->assertContains('name', $greet['inputSchema']['required']);
     }
 
@@ -138,8 +156,11 @@ class McpServerTest extends TestCase
         $this->assertEquals(10, $decoded['sum']);
     }
 
-    public function testToolsCallUnknownToolReturnsError(): void
+    public function testToolsCallUnknownToolReturnsToolLevelError(): void
     {
+        // Unknown tools are a tool-level isError result (with closest-name
+        // suggestions), not a protocol error: several MCP clients tear the
+        // connection down on protocol errors.
         $response = $this->server->handleRequest([
             'jsonrpc' => '2.0',
             'id' => 5,
@@ -150,9 +171,10 @@ class McpServerTest extends TestCase
             ],
         ]);
 
-        $this->assertArrayHasKey('error', $response);
-        $this->assertEquals(-32602, $response['error']['code']);
-        $this->assertStringContainsString('nonexistent', $response['error']['message']);
+        $this->assertEquals('2.0', $response['jsonrpc']);
+        $this->assertEquals(5, $response['id']);
+        $this->assertTrue($response['result']['isError']);
+        $this->assertStringContainsString('nonexistent', $response['result']['content'][0]['text']);
     }
 
     public function testUnknownMethodReturnsError(): void
@@ -170,6 +192,8 @@ class McpServerTest extends TestCase
 
     public function testPingReturnsEmptyResult(): void
     {
+        // ping is legacy-era only; a request without modern-era _meta
+        // negotiates legacy and is answered.
         $response = $this->server->handleRequest([
             'jsonrpc' => '2.0',
             'id' => 7,
@@ -183,14 +207,14 @@ class McpServerTest extends TestCase
 
     public function testToolsCallExecutionErrorReturnsIsError(): void
     {
-        // Call 'add' tool with wrong types — should return isError content, not JSON-RPC error
+        // Call 'greet' tool with missing required argument — should return
+        // isError content, not JSON-RPC error
         $response = $this->server->handleRequest([
             'jsonrpc' => '2.0',
             'id' => 9,
             'method' => 'tools/call',
             'params' => [
                 'name' => 'greet',
-                // Missing required 'name' argument
                 'arguments' => [],
             ],
         ]);

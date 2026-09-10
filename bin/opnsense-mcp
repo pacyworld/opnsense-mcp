@@ -22,7 +22,9 @@
 chdir(dirname(__DIR__));
 require_once 'includes/bootstrap.inc.php';
 
-use Mcp\McpServer;
+use EnchiladaMCP\McpServer;
+use Enchilada\Tortilla\ComalEventLoop;
+use Enchilada\Tortilla\StdioTransport;
 use OPNsense\InstanceManager;
 
 // --- Configuration ---
@@ -91,31 +93,24 @@ foreach ($toolFiles as $toolFile) {
 
 debug("MCP server started (stdio transport)");
 
-// --- Main Loop ---
+// --- Run ---
 
-while (($line = fgets(STDIN)) !== false) {
-    $line = trim($line);
-    if (empty($line)) {
-        continue;
-    }
+// The application owns the event loop (strict opt-in): shared with
+// the stdio transport (reactor I/O) and the tools' HTTP path, where
+// Tortilla\HttpClient parks the dispatch fiber on it during OPNsense
+// API waits. null without vendored Comal: blocking I/O, progress flow
+// via the HttpClient poll loop.
+$loop = ComalEventLoop::create();
+$manager->setHttpTransport($loop, $server->tick(...));
 
-    debug("Received: " . substr($line, 0, 200) . (strlen($line) > 200 ? '...' : ''));
-
-    $request = json_decode($line, true);
-    if ($request === null) {
-        debug("Invalid JSON received");
-        continue;
-    }
-
-    // Handle the request
-    $response = $server->handleRequest($request);
-
-    if (!empty($response)) {
-        $output = json_encode($response, JSON_UNESCAPED_SLASHES);
-        debug("Sending: " . substr($output, 0, 200) . (strlen($output) > 200 ? '...' : ''));
-        fwrite(STDOUT, $output . "\n");
-        fflush(STDOUT);
-    }
+// Primitives in (handler, progress emitter), notifier back out —
+// only the composition root knows both sides of the contract.
+$transport = new StdioTransport($server->handleRequest(...), $server->tick(...));
+$transport->setLogger('debug');
+if ($loop !== null) {
+    $transport->setLoop($loop);      // opts into reactor I/O
 }
+$server->setNotifier($transport->sendNotification(...));
+$transport->run();
 
 debug("MCP server stopped");

@@ -1,6 +1,7 @@
 <?php
 /**
- * Tests for Mcp\ToolRegistry — attribute discovery and schema generation.
+ * Tests for the vendored EnchiladaMCP\ToolRegistry — attribute discovery
+ * and schema generation (transport split).
  *
  * @package    OPNsenseMCP\Tests
  * @author     Daniel Morante
@@ -10,8 +11,8 @@
 
 namespace Tests;
 
-use Mcp\McpTool;
-use Mcp\ToolRegistry;
+use EnchiladaMCP\McpTool;
+use EnchiladaMCP\ToolRegistry;
 use PHPUnit\Framework\TestCase;
 
 /**

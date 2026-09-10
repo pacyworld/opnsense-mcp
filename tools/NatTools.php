@@ -10,7 +10,7 @@
  * @license    BSD-2-Clause
  */
 
-use Mcp\McpTool;
+use EnchiladaMCP\McpTool;
 use OPNsense\InstanceManager;
 
 /**
