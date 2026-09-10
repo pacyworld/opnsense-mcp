@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- Vendored HTTP library layout moved from `libraries/HTTP/` to eponymous directories (`libraries/EnchiladaHTTP/`, `libraries/EnchiladaMultiHTTP/`), which the framework autoloader resolves natively for legacy global classes — the guarded `require_once` in `OPNsense\Client` is gone
+
 ## [1.1.0] - 2026-09-09
 
 ### Changed
