@@ -131,6 +131,7 @@ spl_autoload_register(function ($class) {
     }
 });
 
+use EnchiladaMCP\Logger;
 use EnchiladaMCP\McpServer;
 use Enchilada\Tortilla\ComalEventLoop;
 use Enchilada\Tortilla\StdioTransport;
@@ -139,12 +140,34 @@ use OPNsense\InstanceManager;
 // --- Configuration ---
 
 $configPath = getenv('OPNSENSE_CONFIG') ?: null;
+$logPath = getenv('OPNSENSE_MCP_LOG') ?: null;
+$logLevel = getenv('OPNSENSE_MCP_LOG_LEVEL') ?: 'debug';
+// Stderr mirroring is opt-in. stdout is the protocol channel and stderr
+// is only as reliable as the host's willingness to drain it: a host that
+// captures stderr and never reads it will fill the pipe and stall the
+// server (observed on Windows, where the stream cannot be made
+// non-blocking). The log file is the durable diagnostic channel.
+$stderrEnv = getenv('OPNSENSE_MCP_LOG_STDERR');
+$logStderr = ($stderrEnv === false) ? false : (bool)$stderrEnv;
+$ioMode = getenv('OPNSENSE_MCP_IO_MODE') ?: null;
 
 foreach ($argv ?? [] as $arg) {
     if (str_starts_with($arg, '--config=')) {
         $configPath = substr($arg, 9);
     }
+    if (str_starts_with($arg, '--log=')) {
+        $logPath = substr($arg, 6);
+    }
+    if (str_starts_with($arg, '--log-level=')) {
+        $logLevel = substr($arg, 12);
+    }
+    if (str_starts_with($arg, '--io-mode=')) {
+        $ioMode = substr($arg, 10);
+    }
 }
+
+$logLevelValue = Logger::levelFromString($logLevel) ?? Logger::LEVEL_DEBUG;
+$logger = new Logger($logPath, $logLevelValue, $logStderr, 'opnsense-mcp');
 
 if ($configPath === null) {
     $candidates = [
@@ -169,24 +192,29 @@ if ($configPath === null || !file_exists($configPath)) {
 
 // --- Bootstrap ---
 
-function debug(string $message): void
-{
-    fwrite(STDERR, "[opnsense-mcp] " . $message . "\n");
+if ($logPath !== null && @file_put_contents($logPath, '', FILE_APPEND) === false) {
+    fwrite(STDERR, "[opnsense-mcp] WARNING: Log file not writable: {$logPath}\n");
+    $logger = new Logger(null, $logLevelValue, $logStderr, 'opnsense-mcp');
 }
+
+$logger->info(APPLICATION_NAME . ' ' . APPLICATION_VERSION . " starting (pid " . getmypid() . ", php " . PHP_VERSION . ')');
+$logger->info("Log file: " . ($logPath ?? '(disabled — set OPNSENSE_MCP_LOG to enable)'));
 
 try {
     $manager = InstanceManager::fromFile($configPath);
 } catch (\Exception $e) {
     fwrite(STDERR, "[opnsense-mcp] ERROR: " . $e->getMessage() . "\n");
+    $logger->error('Configuration load failed: ' . $e->getMessage());
     exit(1);
 }
 
 $instanceCount = $manager->count();
-debug("Loaded {$instanceCount} instance(s) from {$configPath} (default: {$manager->getDefault()})");
+$logger->info("Loaded {$instanceCount} instance(s) from {$configPath} (default: {$manager->getDefault()})");
 
 // --- Create MCP Server ---
 
 $server = new McpServer('opnsense-mcp', APPLICATION_VERSION);
+$server->setLogger($logger);
 
 // Register all tool classes
 $toolClasses = [
@@ -197,11 +225,11 @@ $toolClasses = [
 foreach ($toolClasses as $className) {
     if (class_exists($className)) {
         $server->register(new $className($manager));
-        debug("Registered tools: {$className}");
+        $logger->debug("Registered tools: {$className}");
     }
 }
 
-debug("MCP server started (stdio transport, PHAR)");
+$logger->info("MCP server started (stdio transport, PHAR)");
 
 // --- Run ---
 
@@ -216,14 +244,27 @@ $manager->setHttpTransport($loop, $server->tick(...));
 // Primitives in (handler, progress emitter), notifier back out —
 // only the composition root knows both sides of the contract.
 $transport = new StdioTransport($server->handleRequest(...), $server->tick(...));
-$transport->setLogger('debug');
+$transport->setLogger($logger);
 if ($loop !== null) {
     $transport->setLoop($loop);      // opts into reactor I/O
 }
 $server->setNotifier($transport->sendNotification(...));
+
+// I/O mode override. 'auto' (the default) uses the Comal reactor on
+// POSIX and blocking reads on Windows, where an anonymous stdin pipe
+// cannot be polled. Override only when diagnosing transport behaviour.
+if ($ioMode !== null) {
+    try {
+        $transport->setIoMode($ioMode);
+    } catch (\InvalidArgumentException $e) {
+        fwrite(STDERR, "[opnsense-mcp] ERROR: " . $e->getMessage() . "\n");
+        exit(1);
+    }
+}
+
 $transport->run();
 
-debug("MCP server stopped");
+$logger->info("MCP server stopped");
 
 __HALT_COMPILER();
 STUB;
