@@ -4,15 +4,26 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [1.1.3] - 2026-09-27
 
 ### Changed
-- Vendored HTTP library layout moved from `libraries/HTTP/` to eponymous directories (`libraries/EnchiladaHTTP/`, `libraries/EnchiladaMultiHTTP/`), which the framework autoloader resolves natively for legacy global classes — the guarded `require_once` in `OPNsense\Client` is gone
 - Tool descriptions tightened to cut `tools/list` size (2,290 -> 2,190 Qwen tokens); defaults for `limit` and `service_control` action are now stated
+
+## [1.1.2] - 2026-09-13
+
+### Fixed
+- Re-vendored `EnchiladaMultiHTTP`: a response body that fails JSON decoding (e.g. a proxy error page) now completes the request with an error instead of leaving the await loop spinning forever
+- Re-vendored Tortilla `StdioTransport`: in-flight requests are answered before stdin EOF is honoured, and a regular-file stdin degrades to blocking mode (`server < request.json` no longer hangs)
+
+## [1.1.1] - 2026-09-13
+
+### Fixed
+- stdio stalls with hosts that close or never drain their pipes (Zed on Windows): re-vendored Tortilla `StdioTransport` 8367bb8 bounds no-EOF read retries, and diagnostics go through `EnchiladaMCP\Logger` (silent by default; `OPNSENSE_MCP_LOG` / `OPNSENSE_MCP_LOG_STDERR` opt-in) in both `bin/opnsense-mcp` and the PHAR stub. Adds `--log`/`--log-level`/`--io-mode` flags
 
 ## [1.1.0] - 2026-09-09
 
 ### Changed
+- Vendored HTTP library layout moved from `libraries/HTTP/` to eponymous directories (`libraries/EnchiladaHTTP/`, `libraries/EnchiladaMultiHTTP/`), which the framework autoloader resolves natively for legacy global classes — the guarded `require_once` in `OPNsense\Client` is gone
 - Replaced the internal `Mcp\*` protocol core with the canonical vendored Enchilada libraries: `EnchiladaMCP` (protocol core), `Enchilada\Tortilla` (stdio transport, loop-aware `HttpClient`), and `EnchiladaMultiHTTP` for the OPNsense API client. Tool names, descriptions, schemas, and annotations are unchanged. Unknown-tool calls now return tool-level error results with closest-name suggestions instead of protocol errors, and protocol version negotiation follows the shared core (2025-06-18 echoed, `2025-11-25` ceiling for the legacy handshake).
 
 ## [1.0.1] - 2026-06-30
