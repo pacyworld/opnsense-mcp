@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - Vendored HTTP library layout moved from `libraries/HTTP/` to eponymous directories (`libraries/EnchiladaHTTP/`, `libraries/EnchiladaMultiHTTP/`), which the framework autoloader resolves natively for legacy global classes — the guarded `require_once` in `OPNsense\Client` is gone
+- Tool descriptions tightened to cut `tools/list` size (2,290 -> 2,190 Qwen tokens); defaults for `limit` and `service_control` action are now stated
 
 ## [1.1.0] - 2026-09-09
 
