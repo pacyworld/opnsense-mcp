@@ -37,7 +37,7 @@ class DiagnosticsTools
      * @param  string $instance Instance name (empty = default)
      * @return array             ARP table entries
      */
-    #[McpTool(readOnlyHint: true, description: 'Get the ARP table (MAC-to-IP mappings) from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'Get the ARP table (MAC-to-IP mappings)')]
     public function arp_table(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -56,7 +56,7 @@ class DiagnosticsTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Gateway status data
      */
-    #[McpTool(readOnlyHint: true, description: 'Get gateway status (online/offline, latency, packet loss) from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'Get gateway status (online/offline, latency, packet loss)')]
     public function gateway_status(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -76,7 +76,7 @@ class DiagnosticsTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Routing table entries
      */
-    #[McpTool(readOnlyHint: true, description: 'Get the routing table (static routes) from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'Get the routing table (static routes)')]
     public function routing_table(string $search = '', string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -96,7 +96,7 @@ class DiagnosticsTools
      * @param  string $instance Instance name (empty = default)
      * @return array             NDP table entries
      */
-    #[McpTool(readOnlyHint: true, description: 'Get the NDP table (IPv6 neighbor discovery) from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'Get the NDP table (IPv6 neighbor discovery)')]
     public function ndp_table(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

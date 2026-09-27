@@ -37,7 +37,7 @@ class InterfaceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Interface list
      */
-    #[McpTool(readOnlyHint: true, description: 'List all network interfaces with status, addresses, and configuration from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List network interfaces with status, addresses, and configuration')]
     public function interfaces(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -99,7 +99,7 @@ class InterfaceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             VLAN list or operation result
      */
-    #[McpTool(description: 'Manage VLANs on an OPNsense instance. Actions: list, get, create, update, delete')]
+    #[McpTool(description: 'Manage VLANs. Actions: list, get, create, update, delete')]
     public function vlans(
         string $action = 'list',
         string $search = '',

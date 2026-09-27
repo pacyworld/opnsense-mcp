@@ -37,7 +37,7 @@ class BackupTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Backup list
      */
-    #[McpTool(readOnlyHint: true, description: 'List available configuration backups on an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List configuration backups')]
     public function backup_list(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -62,7 +62,7 @@ class BackupTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Backup result
      */
-    #[McpTool(description: 'Create a new configuration backup on an OPNsense instance')]
+    #[McpTool(description: 'Create a configuration backup')]
     public function backup_create(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -88,7 +88,7 @@ class BackupTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Delete result
      */
-    #[McpTool(description: 'Delete a configuration backup from an OPNsense instance')]
+    #[McpTool(description: 'Delete a configuration backup (id from backup_list)')]
     public function backup_delete(string $id = '', string $instance = ''): array
     {
         if (empty($id)) {

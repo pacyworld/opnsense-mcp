@@ -37,7 +37,7 @@ class ServiceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Service list with running/locked status
      */
-    #[McpTool(readOnlyHint: true, description: 'List all services and their running status on an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List services and their running status')]
     public function service_list(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
@@ -58,7 +58,7 @@ class ServiceTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Action result
      */
-    #[McpTool(description: 'Control a service: start, stop, or restart. Provide the service ID from service_list')]
+    #[McpTool(description: 'Start, stop, or restart (default) a service by ID from service_list')]
     public function service_control(string $service, string $action = 'restart', string $instance = ''): array
     {
         if (empty($service)) {

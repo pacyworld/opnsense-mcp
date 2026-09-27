@@ -38,7 +38,7 @@ class DhcpTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Lease list
      */
-    #[McpTool(readOnlyHint: true, description: 'Get DHCPv4 leases showing active IP address assignments from an OPNsense instance')]
+    #[McpTool(readOnlyHint: true, description: 'List active DHCPv4 leases')]
     public function dhcp_leases(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);

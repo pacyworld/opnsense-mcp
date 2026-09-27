@@ -41,7 +41,7 @@ class FirewallTools
      * @param  string $instance     Instance name (empty = default)
      * @return array                 Rule list or operation result
      */
-    #[McpTool(description: 'Manage OPNsense firewall filter rules. Actions: list, get, create, update, delete, toggle')]
+    #[McpTool(description: 'Manage firewall filter rules. Actions: list, get, create, update, delete, toggle')]
     public function firewall_rules(
         string $action = 'list',
         string $search = '',
@@ -73,7 +73,7 @@ class FirewallTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Alias list or operation result
      */
-    #[McpTool(description: 'Manage OPNsense firewall aliases (address/port groups). Actions: list, get, create, update, delete')]
+    #[McpTool(description: 'Manage firewall aliases (address/port groups). Actions: list, get, create, update, delete')]
     public function firewall_aliases(
         string $action = 'list',
         string $search = '',
@@ -100,7 +100,7 @@ class FirewallTools
      * @param  string $instance Instance name (empty = default)
      * @return array             Apply result
      */
-    #[McpTool(description: 'Apply pending firewall changes on an OPNsense instance')]
+    #[McpTool(description: 'Apply pending firewall changes')]
     public function firewall_apply(string $instance = ''): array
     {
         $client = $this->manager->getClient($instance ?: null);
