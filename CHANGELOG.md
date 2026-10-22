@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+- Re-vendored the Enchilada libraries onto the EnchiladaCurl split: `EnchiladaCurl` (abstract curl base) and `EnchiladaWorkerHTTP` (worker-pool client) are new, `EnchiladaMultiHTTP` now sits on the shared base, and `EnchiladaHTTP`, `EnchiladaMCP`, and `Enchilada\Tortilla` (including `OAuthCallbackHelper`) are refreshed from canonical upstream master
+
+### Added
+- `tests/enchilada-curl/` vendored from `daniel/engineering-docs` enchilada-extras/curl-behaviour-suite/: curl behaviour suite and door linter, now run in CI (FreeBSD and Windows jobs) against the vendored `libraries/`
+
 ## [1.1.3] - 2026-09-27
 
 ### Changed
