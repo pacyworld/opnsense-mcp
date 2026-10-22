@@ -31,6 +31,13 @@ jobs:
             fi
           done
 
+          # Vendored curl suite requires curl and tokenizer explicitly
+          for pkg in php84-curl php84-tokenizer; do
+            if ! pkg info -e "$pkg" 2>/dev/null; then
+              NEEDED="${NEEDED} ${pkg}"
+            fi
+          done
+
           # PHPUnit from system packages (package name includes PHP version suffix)
           PHPUNIT_PKG="phpunit11-${PHP_PKG}"
           if ! pkg info -e "${PHPUNIT_PKG}" 2>/dev/null; then
@@ -56,3 +63,43 @@ jobs:
 
       - name: Run tests
         run: phpunit --colors=always
+
+      - name: curl behaviour suite and lint (vendored libraries)
+        run: |
+          php tests/enchilada-curl/run.php --lib=libraries
+          php tests/enchilada-curl/lint_curl_door.php libraries/EnchiladaCurl libraries/EnchiladaMultiHTTP libraries/EnchiladaWorkerHTTP libraries/Enchilada/Tortilla
+
+  behaviour-windows:
+    name: 'curl behaviour suite (Windows)'
+    runs-on: windows-2022
+
+    env:
+      PHP_DIR: C:\php84
+
+    steps:
+      - name: Checkout
+        shell: powershell
+        run: |
+          cd "$env:GITHUB_WORKSPACE"
+          Get-ChildItem | Remove-Item -Recurse -Force
+          $ref = if ($env:GITHUB_EVENT_NAME -eq 'pull_request') { $env:GITHUB_HEAD_REF } else { $env:GITHUB_SHA }
+          & curl.exe -fL --ssl-no-revoke --retry 6 --retry-delay 5 -o repo.tar.gz "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/archive/$ref.tar.gz"
+          if ($LASTEXITCODE -ne 0) { throw "repo tarball fetch failed (curl rc=$LASTEXITCODE)" }
+          tar xf repo.tar.gz --strip-components=1
+          Remove-Item repo.tar.gz
+
+      - name: PHP (preinstalled on runner02)
+        shell: powershell
+        run: |
+          if (-not (Test-Path "$env:PHP_DIR\php.exe")) { throw "PHP not installed at $env:PHP_DIR" }
+          Add-Content -Path $env:GITHUB_PATH -Value $env:PHP_DIR
+
+      - name: curl behaviour suite and lint (vendored libraries)
+        shell: powershell
+        run: |
+          cd "$env:GITHUB_WORKSPACE"
+          php -v
+          php tests/enchilada-curl/run.php --lib=libraries
+          if ($LASTEXITCODE -ne 0) { throw "behaviour suite failed" }
+          php tests/enchilada-curl/lint_curl_door.php libraries/EnchiladaCurl libraries/EnchiladaMultiHTTP libraries/EnchiladaWorkerHTTP libraries/Enchilada/Tortilla
+          if ($LASTEXITCODE -ne 0) { throw "curl lint failed" }

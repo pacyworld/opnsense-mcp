@@ -5,16 +5,17 @@ Developer/agent-facing. Read this **before** touching `libraries/`,
 
 ## 1. The transport split (September 2026) changed the rules
 
-Three independent libraries, vendored byte-identical from canonical
-upstream **master** (pull first, then copy — never from another
+Libraries are vendored byte-identical from canonical upstream
+**master** (pull first, then copy — never from another
 consumer's tree):
 
 | Vendored dir | Source | What it is |
 |---|---|---|
 | `libraries/EnchiladaMCP/` | `Enchilada/Extras` MCP/ | Protocol core. No I/O, no loop, no framework deps. |
-| `libraries/Enchilada/Tortilla/` | `Enchilada/Tortilla` src/ | Wire transports, `EventLoop` port, `HttpClient`, `RequestEra`. |
-| `libraries/EnchiladaHTTP/` | Extras HTTP/ | Blocking engine (legacy global class). **Frozen.** |
-| `libraries/EnchiladaMultiHTTP/` | Extras HTTP/ | curl_multi engine (legacy global class). **Frozen.** |
+| `libraries/Enchilada/Tortilla/` | `Enchilada/Tortilla` src/ | Wire transports, `EventLoop` port, `HttpClient`, `RequestEra`, `OAuthCallbackHelper`. |
+| `libraries/EnchiladaCurl/`, `libraries/EnchiladaMultiHTTP/`, `libraries/EnchiladaWorkerHTTP/` | Extras HTTP/ | curl clients on the abstract `EnchiladaCurl` base (curl_multi engine, worker pool; legacy global classes). Vendor together with Tortilla. |
+| `libraries/EnchiladaHTTP/` | Extras HTTP/ | Standalone blocking client (legacy global class). |
+| `tests/enchilada-curl/` | `daniel/engineering-docs` enchilada-extras/curl-behaviour-suite/ | Curl behaviour gate; runs in CI against `libraries/`. Re-vendor with HTTP/. |
 
 (No Comal → stdio runs its supported blocking mode; progress
 notifications keep the host alive during long calls.)
@@ -33,8 +34,9 @@ notifications keep the host alive during long calls.)
 4. **No blocking network I/O inside tools.** All OPNsense API traffic
    goes through `OPNsense\Client` → `Tortilla\HttpClient`. New endpoints
    extend the Client; nothing in `tools/` may instantiate raw HTTP.
-   - `EnchiladaHTTP`/`EnchiladaMultiHTTP` are frozen: no MCP hooks, no
-     behavior changes.
+   - `EnchiladaHTTP` is frozen: no MCP hooks, no behavior changes.
+     `EnchiladaMultiHTTP` and `EnchiladaWorkerHTTP` move with the
+     `EnchiladaCurl` base upstream.
    - Raw-socket I/O, if ever added, uses the
      `setTransport(?EventLoop, ?progress)` pattern (reference: mail-mcp
      `SocketImapClient`); writability waits probe between parked slices
@@ -53,6 +55,11 @@ notifications keep the host alive during long calls.)
 ## 4. Regression gates (before every commit)
 
 - `phpunit` — green.
+- Curl behaviour suite: `php tests/enchilada-curl/run.php --lib=libraries`
+  — all scenarios green (worker+hooks skips without Comal);
+  `php tests/enchilada-curl/lint_curl_door.php libraries/EnchiladaCurl
+  libraries/EnchiladaMultiHTTP libraries/EnchiladaWorkerHTTP
+  libraries/Enchilada/Tortilla` — ok.
 - Liveness suite:
   `php ~/Documents/Projects/engineering-docs/enchilada-extras/mcp-liveness-suite/transport-liveness.php --lib=libraries`
   (blocking regime) — 9/9.
